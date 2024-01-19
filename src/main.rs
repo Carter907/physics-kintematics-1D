@@ -35,18 +35,29 @@ fn setup(
 }
 
 #[derive(Resource)]
-struct PhysicsTimer;
+struct PhysicsTimer(Timer);
 
 fn update_entities(
     time: Res<Time>,
     mut timer: ResMut<PhysicsTimer>,
     mut query: Query<(&mut Velocity, &mut Displacement), With<PhysicsEntity>>,
 ) {
+    query.for_each_mut(|mut properties| {
+        properties.0 .0 += -9.81 * time.delta().as_secs_f64();
+        properties.1 .0 += properties.0 .0 * time.delta().as_secs_f64();
+    });
+    if timer.0.tick(time.delta()).just_finished() {
+        for (velocity, displacement) in &mut query {
+            println!("{} {}", velocity.0, displacement.0);
+        }
+    }
 }
 
 struct PhysicsFreeFall;
 impl Plugin for PhysicsFreeFall {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
+        app.insert_resource(PhysicsTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
+            .add_systems(Startup, setup)
+            .add_systems(Update, update_entities);
     }
 }
